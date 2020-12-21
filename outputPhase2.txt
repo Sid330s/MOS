@@ -1,0 +1,43 @@
+*   
+*   *   
+*   *   *   
+*   *   
+EM(2) : Line Limit Exceeded
+Process(202) Terminated: Time Taken -> 21/25 Lines Printed -> 5/4
+
+
+CAT CAN EAT RAT 
+RAT 
+EM(0) : No Error
+Process(302) Terminated: Time Taken -> 14/13 Lines Printed -> 2/2
+
+
+EM(6) : Invalid Page Fault
+Process(102) Terminated: Time Taken -> 3/7 Lines Printed -> 0/2
+
+
+ABCD
+ABCD
+DO NOT
+EM(3) : Time Limit Exceeded
+Process(401) Terminated: Time Taken -> 14/9 Lines Printed -> 3/4
+
+
+EM(5) : Operand Error
+Process(1503) Terminated: Time Taken -> 5/20 Lines Printed -> 0/10
+
+
+EM(4) : Operation Code Error
+Process(1403) Terminated: Time Taken -> 12/50 Lines Printed -> 0/8
+
+
+EM(4) : Operation Code Error
+Process(1403) Terminated: Time Taken -> 12/50 Lines Printed -> 0/8
+
+
+ABCD
+ABCD
+EM(5) : Operand Error
+Process(401) Terminated: Time Taken -> 12/19 Lines Printed -> 2/4
+
+

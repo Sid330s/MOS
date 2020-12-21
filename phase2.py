@@ -24,7 +24,7 @@ class LinePrinter():
     def jobend(self, cpu, pcb):
         outLine = "Process" + "(" + str(pcb.jobID) + ")" + " Terminated: "
         outLine+="Time Taken -> " + str(pcb.TTC) + "/" + str(pcb.TTL) + " "
-        outLine+="Lines Printed -> " + str(pcb.TLC) + "/" + str(pcb.TLL) + "\n"
+        outLine+="Lines Printed -> " + str(pcb.LLC) + "/" + str(pcb.TLL) + "\n"
         self.outfile.write(outLine)
         self.outfile.write('\n\n')
 
@@ -34,7 +34,7 @@ class PCB():
         self.TTL = int("".join(_TTL))
         self.TLL = int("".join(_TLL))
         self.TTC = 0
-        self.TLC = 0
+        self.LLC = 0
 
 class Memory():
     def __init__(self):
@@ -131,7 +131,7 @@ class Cpu():
                 self.masterMode(card, memory, linep, pcb, mos)
             elif self.IR[:2]==["P", "D"]:
                 self.SI = 2
-                pcb.TLC+=1
+                pcb.LLC+=1
                 pcb.TTC+=1
                 if pcb.TTC > pcb.TTL:
                     self.TI = 2
@@ -205,7 +205,7 @@ class Cpu():
             memory.printMem()
             return
         elif self.TI==0 and self.SI==2:
-            if pcb.TLC > pcb.TLL:
+            if pcb.LLC > pcb.TLL:
                 outputLine = "EM(2) : Line Limit Exceeded"
                 linep.write(outputLine)
                 linep.jobend(self, pcb)
@@ -237,7 +237,7 @@ class Cpu():
             self.runLoop = False
             linep.jobend(self, pcb)
         elif self.TI==2 and self.SI==2:
-            if pcb.TLC > pcb.TLL:
+            if pcb.LLC > pcb.TLL:
                 outputLine = "EM(2) : Line Limit Exceeded"
                 linep.write(outputLine)
                 linep.jobend(self, pcb)
@@ -358,6 +358,6 @@ class MOS():
             else:
                 #Error
                 pass
-	
+
 mos=MOS()
 mos.load()

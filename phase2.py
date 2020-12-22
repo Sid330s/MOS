@@ -24,7 +24,7 @@ class LinePrinter():
     def jobend(self, cpu, pcb):
         outLine = "Process" + "(" + str(pcb.jobID) + ")" + " Terminated: "
         outLine+="Time Taken -> " + str(pcb.TTC) + "/" + str(pcb.TTL) + " "
-        outLine+="Lines Printed -> " + str(pcb.LLC) + "/" + str(pcb.TLL) + "\n"
+        outLine+="Lines Printed -> " + str(pcb.TLC) + "/" + str(pcb.TLL) + "\n"
         self.outfile.write(outLine)
         self.outfile.write('\n\n')
 
@@ -34,7 +34,7 @@ class PCB():
         self.TTL = int("".join(_TTL))
         self.TLL = int("".join(_TLL))
         self.TTC = 0
-        self.LLC = 0
+        self.TLC = 0
 
 class Memory():
     def __init__(self):
@@ -49,7 +49,7 @@ class Memory():
         self.pageNo = randint(0, 29)*10
         while self.mainMem[self.pageNo][0]!=None:
             self.pageNo = randint(0, 29)*10
-        ttp = str(self.pageNo).rjust(4)
+        ttp = str(self.pageNo//10).rjust(4)
         self.mainMem[pte][:] = list(ttp)
 
     def printMem(self):
@@ -93,11 +93,10 @@ class Cpu():
         self.runLoop = True
 
     def getBlock(self, va):
-        return self.PTR + (va//10)
+        return (self.PTR + (va//10))
 
     def vaToRa(self, va, memory):
-        print(va)
-        ra = int("".join(memory.mainMem[self.getBlock(va)]).strip()) + (va%10)
+        ra = int("".join(memory.mainMem[self.getBlock(va)]).strip())*10 + (va%10)
         return ra
 
     def isValid(self, va, memory):
@@ -112,7 +111,6 @@ class Cpu():
             realAdd = self.vaToRa(self.IC, memory)
             self.IR[:] = memory.mainMem[realAdd][:]
             self.IC+=1
-            print(self.IC, self.IR)
             self.SI = 0
             self.TI = 0
             self.PI = 0
@@ -124,24 +122,23 @@ class Cpu():
                 self.masterMode(card, memory, linep, pcb, mos)
             elif self.IR[:2]==["G", "D"]:
                 self.SI = 1
+                pcb.TTC+=1
+                if pcb.TTC > pcb.TTL:
+                    self.TI = 2
                 if not "".join(self.IR[2:]).strip().isnumeric():
                     self.PI = 2
+                if memory.mainMem[self.getBlock(int("".join(self.IR[2:])))][0]==None:
+                    memory.setABlock(self.PTR + int("".join(self.IR[2:]))//10)
                 memory.setABlock(self.PTR + int("".join(self.IR[2:]))//10)
                 realAdd = self.vaToRa(int("".join(self.IR[2:])), memory)
                 self.masterMode(card, memory, linep, pcb, mos)
             elif self.IR[:2]==["P", "D"]:
                 self.SI = 2
-                pcb.LLC+=1
-                pcb.TTC+=1
-                if pcb.TTC > pcb.TTL:
-                    self.TI = 2
+                pcb.TLC+=1
                 if not "".join(self.IR[2:]).strip().isnumeric():
                     self.PI = 2
                 self.masterMode(card, memory, linep, pcb, mos)
             elif self.IR[:2]==["L", "R"]:
-                pcb.TTC+=1
-                if pcb.TTC > pcb.TTL:
-                    self.TI = 2
                 if not "".join(self.IR[2:]).strip().isnumeric():
                     self.PI = 2
                 elif not self.isValid(int("".join(self.IR[2:]).strip()), memory):
@@ -152,6 +149,9 @@ class Cpu():
                     realAdd = self.vaToRa(int("".join(self.IR[2:])), memory)
                     self.R[:] = memory.mainMem[realAdd][:]
             elif self.IR[:2]==["S", "R"]:
+                pcb.TTC+=1
+                if pcb.TTC > pcb.TTL:
+                    self.TI = 2
                 if not "".join(self.IR[2:]).strip().isnumeric():
                     self.PI = 2
                 if self.TI!=0 or self.PI!=0:
@@ -179,33 +179,32 @@ class Cpu():
                     self.masterMode(card, memory, linep, pcb, mos)
                 else:
                     if self.C:
-                        realAdd = self.vaToRa(int("".join(self.IR[2:])), memory)
-                        self.IC = realAdd
+                        self.IC = int("".join(self.IR[2:]))
             else:
                 self.PI = 1
                 self.masterMode(card, memory, linep, pcb, mos)
 
     def masterMode(self, card, memory, linep, pcb, mos):
         if self.TI==0 and self.SI==1:
-            print(int("".join(self.IR[2:])))
             realAdd = self.vaToRa(int("".join(self.IR[2:])), memory)
-            print(realAdd)
             data = card.read()
             if data[0]=="$":
+                outputLine = "EM(1) : Out of Data"
+                linep.write(outputLine)
+                linep.jobend(self, pcb)
+                self.runLoop = False
                 mos.terJob = True
                 return
             wordOffSet = 0
             offset = 0
             for i in data[:-1]:
-                print(realAdd + wordOffSet, offset)
                 memory.mainMem[realAdd + wordOffSet][offset] = i
                 offset+=1
                 if offset==4: wordOffSet+=1
                 offset%=4
-            memory.printMem()
             return
         elif self.TI==0 and self.SI==2:
-            if pcb.LLC > pcb.TLL:
+            if pcb.TLC > pcb.TLL:
                 outputLine = "EM(2) : Line Limit Exceeded"
                 linep.write(outputLine)
                 linep.jobend(self, pcb)
@@ -236,8 +235,9 @@ class Cpu():
             linep.write(outputLine)
             self.runLoop = False
             linep.jobend(self, pcb)
+            return
         elif self.TI==2 and self.SI==2:
-            if pcb.LLC > pcb.TLL:
+            if pcb.TLC > pcb.TLL:
                 outputLine = "EM(2) : Line Limit Exceeded"
                 linep.write(outputLine)
                 linep.jobend(self, pcb)
@@ -280,6 +280,11 @@ class Cpu():
             self.runLoop = False
         elif self.TI==0 and self.PI==3:
             outputLine = "EM(6) : Invalid Page Fault"
+            linep.write(outputLine)
+            linep.jobend(self, pcb)
+            self.runLoop = False
+        elif self.TI==2 and self.PI==0:
+            outputLine = "EM(3) : Time Limit Exceeded"
             linep.write(outputLine)
             linep.jobend(self, pcb)
             self.runLoop = False
@@ -358,6 +363,6 @@ class MOS():
             else:
                 #Error
                 pass
-
+	
 mos=MOS()
 mos.load()
